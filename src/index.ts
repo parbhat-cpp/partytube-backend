@@ -15,18 +15,20 @@ app.use(express.json());
 app.use(express.urlencoded());
 
 let roomsData: any = {};
+let usersData: any = {};
 const io = new Server();
 
 io.on("connection", (socket) => {
-    socket.on("create-room", (adminUsername: string, roomName: string, roomId: string) => {
+    socket.on("create-room", (adminUsername: string, userId: string, roomName: string, roomId: string) => {
+        console.log('room create');
+
         // Check if room exists
         if (roomsData[`${roomId}`]) {
             socket.emit("room-exists");
             return;
         }
 
-        // Creating unique user id
-        const userId: string = getUniqueUserId() as string;
+        socket.emit("room-n-exists");
 
         // Creating Admin user
         const admin: Users = {
@@ -43,25 +45,40 @@ io.on("connection", (socket) => {
             users: [admin],
         };
 
+        usersData = {
+            ...usersData,
+            [`${userId}`]: {
+                name: adminUsername,
+                id: userId,
+                isAdmin: true,
+                room: roomId
+            }
+        }
+
         // Updating Room data
         roomsData = {
             ...roomsData,
             [`${roomId}`]: newRoom
         }
 
+        socket.emit("user-id", userId);
+
         console.log(roomsData);
         console.log(roomsData[`${roomId}`].users);
+        console.log(usersData);
     });
 
-    socket.on("join-room", (username: string, roomId: string) => {
+    socket.on("join-room", (username: string, userId: string, roomId: string) => {
+        console.log('join room');
+
         // Check if room does not exists
         if (!roomsData[`${roomId}`]) {
             socket.emit("room-not-found");
             return;
         }
 
-        // Creating unique user id
-        const userId: string = getUniqueUserId() as string;
+        // emitting room found
+        socket.emit("room-found");
 
         // Creating new user
         const newUser: Users = {
@@ -69,25 +86,44 @@ io.on("connection", (socket) => {
             username: username,
         }
 
+        usersData = {
+            ...usersData,
+            [`${userId}`]: {
+                name: username,
+                id: userId,
+                isAdmin: false,
+                room: roomId
+            }
+        }
+
         roomsData[`${roomId}`].users.push(newUser);
 
-        socket.broadcast.emit("new-user-joined");
+        socket.broadcast.emit("new-user-joined", username);
 
         console.log(roomsData);
         console.log(roomsData[`${roomId}`].users);
+        console.log(usersData);
+
     });
 
     socket.on("leave-room", (userId: string, username: string, roomId: string) => {
+        console.log('leave room');
+
         // Check if room exists
         if (!roomsData[`${roomId}`]) {
             socket.emit("room-not-found");
             return;
         }
 
-        // Admmin left room
+        // Admin left room
         if (roomsData[`${roomId}`].roomAdminId === userId) {
             delete roomsData[`${roomId}`];
+            delete usersData[`${userId}`];
+
             socket.broadcast.emit("admin-left-room");
+            console.log(roomsData);
+            console.log(usersData);
+
             return;
         }
 
@@ -99,12 +135,40 @@ io.on("connection", (socket) => {
         // When a user leaves a room
         const userIndex: number = roomsData[`${roomId}`].users.indexOf(user);
 
-        if (userIndex > -1) {
-            roomsData[`${roomId}`].users.splice(userIndex, 1);
-            socket.broadcast.emit("user-left");
-        } else {
-            socket.emit("unable-to-leave");
+        if (usersData[`${userId}`]) {
+            delete usersData[`${userId}`];
+
+            let index = roomsData[`${roomId}`].users.findIndex((obj: Users) => obj.userId === userId);
+            if (index !== -1) {
+                roomsData[`${roomId}`].users.splice(index, 1);
+            }
+
+            socket.broadcast.emit("user-left", username);
+
+            console.log(roomsData[`${roomId}`].users);
+            console.log(usersData);
+            return;
         }
+    });
+
+    socket.on("get-room", (roomId: string) => {
+        // Check if room exists
+        if (!roomsData[`${roomId}`]) {
+            socket.emit("room-not-found");
+            return;
+        }
+
+        socket.emit("room-info", roomsData[`${roomId}`]);
+    });
+
+    socket.on("get-user", (userId: string) => {
+        // Check if user exists
+        if (!usersData[`${userId}`]) {
+            socket.emit("user-not-found");
+            return;
+        }
+
+        socket.emit("user-info", usersData[`${userId}`]);
     });
 });
 
