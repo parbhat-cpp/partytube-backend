@@ -20,8 +20,6 @@ const io = new Server();
 
 io.on("connection", (socket) => {
     socket.on("create-room", (adminUsername: string, userId: string, roomName: string, roomId: string) => {
-        console.log('room create');
-
         // Check if room exists
         if (roomsData[`${roomId}`]) {
             socket.emit("room-exists");
@@ -62,15 +60,9 @@ io.on("connection", (socket) => {
         }
 
         socket.emit("user-id", userId);
-
-        console.log(roomsData);
-        console.log(roomsData[`${roomId}`].users);
-        console.log(usersData);
     });
 
     socket.on("join-room", (username: string, userId: string, roomId: string) => {
-        console.log('join room');
-
         // Check if room does not exists
         if (!roomsData[`${roomId}`]) {
             socket.emit("room-not-found");
@@ -99,16 +91,9 @@ io.on("connection", (socket) => {
         roomsData[`${roomId}`].users.push(newUser);
 
         socket.broadcast.emit("new-user-joined", username);
-
-        console.log(roomsData);
-        console.log(roomsData[`${roomId}`].users);
-        console.log(usersData);
-
     });
 
     socket.on("leave-room", (userId: string, username: string, roomId: string) => {
-        console.log('leave room');
-
         // Check if room exists
         if (!roomsData[`${roomId}`]) {
             socket.emit("room-not-found");
@@ -121,9 +106,6 @@ io.on("connection", (socket) => {
             delete usersData[`${userId}`];
 
             socket.broadcast.emit("admin-left-room");
-            console.log(roomsData);
-            console.log(usersData);
-
             return;
         }
 
@@ -144,9 +126,6 @@ io.on("connection", (socket) => {
             }
 
             socket.broadcast.emit("user-left", username);
-
-            console.log(roomsData[`${roomId}`].users);
-            console.log(usersData);
             return;
         }
     });
@@ -170,10 +149,48 @@ io.on("connection", (socket) => {
 
         socket.emit("user-info", usersData[`${userId}`]);
     });
+
+    socket.on("remove-user", (userId: string, roomId: string) => {
+        // Check if user exists
+        if (!usersData[`${userId}`]) {
+            socket.emit("user-not-found");
+            return;
+        }
+
+        let index = roomsData[`${roomId}`].users.findIndex((obj: Users) => obj.userId === userId);
+        if (index !== -1) {
+            roomsData[`${roomId}`].users.splice(index, 1);
+        }
+
+        delete usersData[`${userId}`];
+
+        socket.broadcast.emit("remove-user-response", userId);
+    });
+
+    socket.on("user-removed", (username: string) => {
+        socket.broadcast.emit("user-kicked", username);
+    });
+
+    socket.on("set-video", (username: string, videoId: string) => {
+        socket.broadcast.emit("set-videoid", { "username": username, "videoId": videoId });
+    });
+
+    // Chat logic
+    socket.on("send-message", (username: string, userId: string, message: string) => {
+        // if (username && userId && message) {
+        socket.broadcast.emit("receive-message", { "username": username, "userId": userId, "message": message });
+        // }
+    });
+
+    // seek video
+    socket.on("seek-video", (seekData: any) => {
+        socket.broadcast.emit("set-video-duration", seekData);
+    });
 });
 
 io.listen(WS_PORT);
 
 app.listen(PORT, () => {
-    console.log(`running on http://localhost:${PORT}`);
+    console.log(`running http server on http://localhost:${PORT}`);
+    console.log(`running ws server on ws://localhost:${WS_PORT}`);
 })
