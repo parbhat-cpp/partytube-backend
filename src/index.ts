@@ -1,9 +1,9 @@
 import express, { Express } from "express";
 import { config } from 'dotenv';
+import { Server } from "socket.io";
 import { Users } from "./types/users-type";
 import { RoomData } from "./types/room-infotype";
 import cors from 'cors';
-import http from 'http';
 config();
 
 const app: Express = express();
@@ -14,19 +14,11 @@ app.use(express.json());
 app.use(express.urlencoded());
 app.use(cors());
 
-const server = http.createServer(app);
 let roomsData: any = {};
 let usersData: any = {};
-const io = require('socket.io')(server, {
-    allowEIO3: true,
-    transports: ['websocket'],
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
-});
+const io = new Server();
 
-io.on("connection", (socket: any) => {
+io.on("connection", (socket) => {
     socket.on("create-room", (adminUsername: string, userId: string, roomName: string, roomId: string) => {
         // Check if room exists
         if (roomsData[`${roomId}`]) {
@@ -194,23 +186,9 @@ io.on("connection", (socket: any) => {
     socket.on("seek-video", (seekData: any) => {
         socket.broadcast.emit("set-video-duration", seekData);
     });
-
-    socket.on("disconnect", (reason: any, details: any) => {
-        // the reason of the disconnection, for example "transport error"
-        console.log(reason);
-
-        // the low-level reason of the disconnection, for example "xhr post error"
-        console.log(details.message);
-
-        // some additional description, for example the status code of the HTTP response
-        console.log(details.description);
-
-        // some additional context, for example the XMLHttpRequest object
-        console.log(details.context);
-    });
 });
 
-server.listen(WS_PORT);
+io.listen(WS_PORT);
 
 app.listen(PORT, () => {
     console.log(`running http server on http://localhost:${PORT}`);
