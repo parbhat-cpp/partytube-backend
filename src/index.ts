@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import { Users } from "./types/users-type";
 import { RoomData } from "./types/room-infotype";
 import cors from 'cors';
+import http from 'http';
 config();
 
 const app: Express = express();
@@ -16,7 +17,14 @@ app.use(cors());
 
 let roomsData: any = {};
 let usersData: any = {};
-const io = new Server();
+const io = new Server(new http.Server(app), {
+    transports: ['polling', 'websocket'],
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
 
 io.on("connection", (socket) => {
     socket.on("create-room", (adminUsername: string, userId: string, roomName: string, roomId: string) => {
