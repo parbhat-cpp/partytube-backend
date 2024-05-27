@@ -3,8 +3,8 @@ import { config } from 'dotenv';
 import { Server } from "socket.io";
 import { Users } from "./types/users-type";
 import { RoomData } from "./types/room-infotype";
-import { getUniqueUserId } from "./functions";
-
+import cors from 'cors';
+import http from 'http';
 config();
 
 const app: Express = express();
@@ -13,10 +13,17 @@ const WS_PORT: number = Number(process.env.WS_PORT?.toString()) || 3000;
 
 app.use(express.json());
 app.use(express.urlencoded());
+app.use(cors());
 
+const server = http.createServer(app);
 let roomsData: any = {};
 let usersData: any = {};
-const io = new Server();
+const io = new Server(server, {
+    cors: {
+        origin: "*", 
+        methods: ["GET", "POST"]
+    }
+});
 
 io.on("connection", (socket) => {
     socket.on("create-room", (adminUsername: string, userId: string, roomName: string, roomId: string) => {
