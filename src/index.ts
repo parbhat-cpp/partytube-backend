@@ -197,7 +197,7 @@ io.on("connection", (socket) => {
     });
 });
 
-io.listen(WS_PORT);
+server.listen(WS_PORT);
 
 app.listen(PORT, () => {
     console.log(`running http server on http://localhost:${PORT}`);
