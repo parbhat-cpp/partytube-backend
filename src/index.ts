@@ -1,6 +1,5 @@
 import express, { Express } from "express";
 import { config } from 'dotenv';
-import { Server } from "socket.io";
 import { Users } from "./types/users-type";
 import { RoomData } from "./types/room-infotype";
 import cors from 'cors';
@@ -18,7 +17,7 @@ app.use(cors());
 const server = http.createServer(app);
 let roomsData: any = {};
 let usersData: any = {};
-const io = new Server(server, {
+const io = require('socket.io')(server, {
     allowEIO3: true,
     transports: ['websocket'],
     cors: {
@@ -27,7 +26,7 @@ const io = new Server(server, {
     }
 });
 
-io.on("connection", (socket) => {
+io.on("connection", (socket: any) => {
     socket.on("create-room", (adminUsername: string, userId: string, roomName: string, roomId: string) => {
         // Check if room exists
         if (roomsData[`${roomId}`]) {
@@ -196,7 +195,7 @@ io.on("connection", (socket) => {
         socket.broadcast.emit("set-video-duration", seekData);
     });
 
-    socket.on("disconnect", (reason, details) => {
+    socket.on("disconnect", (reason: any, details: any) => {
         // the reason of the disconnection, for example "transport error"
         console.log(reason);
 
