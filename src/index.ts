@@ -197,8 +197,3 @@ io.on("connection", (socket) => {
 });
 
 io.listen(WS_PORT);
-
-app.listen(PORT, () => {
-    console.log(`running http server on http://localhost:${PORT}`);
-    console.log(`running ws server on ws://localhost:${WS_PORT}`);
-})
