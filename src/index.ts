@@ -17,7 +17,8 @@ app.use(cors());
 
 let roomsData: any = {};
 let usersData: any = {};
-const io = new Server(new http.Server(app), {
+const server = new http.Server(app);
+const io = new Server(server, {
     transports: ['polling', 'websocket'],
     cors: {
         origin: "*",
@@ -196,4 +197,6 @@ io.on("connection", (socket) => {
     });
 });
 
-io.listen(WS_PORT);
+server.listen(WS_PORT, () => {
+    console.log('server running');
+});
